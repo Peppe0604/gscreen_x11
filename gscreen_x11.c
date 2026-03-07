@@ -17,7 +17,7 @@
 
 // Macro per estrarre e scalare un singolo colore
 // - pixel: il blocco a 32 bit letto dalla memoria
-// - offset: da dove inizia il colore (letto da env.vinfo)
+// - offset: da dove inizia il colore
 #define EXTRACT(pixel, offset) (((pixel) >> (offset)) & 0xFF)
 
 XImage *captureScreen(Display **display){
