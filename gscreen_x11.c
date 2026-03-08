@@ -17,7 +17,7 @@
 
 // Macro per estrarre e scalare un singolo colore
 // - pixel: il blocco a 32 bit letto dalla memoria
-// - offset: da dove inizia il colore
+// - offset: da dove inizia il colore (letto da env.vinfo)
 #define EXTRACT(pixel, offset) (((pixel) >> (offset)) & 0xFF)
 
 XImage *captureScreen(Display **display){
@@ -45,17 +45,17 @@ XImage *captureScreen(Display **display){
 
 
 uint8_t *convertX11(XImage *image){
-    size_t totalPixel = image->width * image->height;
+    size_t totalPixels = image->width * image->height;
 
-    uint8_t *newImage = malloc(totalPixel * NUMBER_OF_COLORS);
+    uint8_t *newImage = malloc(totalPixels * NUMBER_OF_COLORS);
     if (newImage == NULL){
-        perror("Errore surante l'allocazione dell'immagine converita");
+        perror("Errore durante l'allocazione dell'immagine convertita");
         return NULL;
     }
 
-    uint32_t *oldImage = (uint32_t *)image->data;
-    for (size_t i = 0; i < totalPixel; i++){
-        uint32_t pixel = oldImage[i];
+    uint32_t *rawImage = (uint32_t *)image->data;
+    for (size_t i = 0; i < totalPixels; i++){
+        uint32_t pixel = rawImage[i];
 
         newImage[i * NUMBER_OF_COLORS] = EXTRACT(pixel, OFFSET_RED);
         newImage[i * NUMBER_OF_COLORS + 1] = EXTRACT(pixel, OFFSET_GREEN);
@@ -65,7 +65,7 @@ uint8_t *convertX11(XImage *image){
     return newImage;
 }
 
-int savePng(uint8_t *fb, int width, int height, const char *name){
+int savePng(uint8_t *pixels, int width, int height, const char *name){
     int status = ERROR;
 
     FILE *fp = fopen(name, "wb");
@@ -104,7 +104,7 @@ int savePng(uint8_t *fb, int width, int height, const char *name){
         goto free;
     }
     for (int y = 0; y < height; y++) {
-        rowPointers[y] = (png_bytep)(fb + (y * width * NUMBER_OF_COLORS));
+        rowPointers[y] = (png_bytep)(pixels + (y * width * NUMBER_OF_COLORS));
     }
 
     png_write_image(png, rowPointers);
@@ -138,13 +138,13 @@ int main(int argc, char **argv){
         return ERROR;
     }
 
-    uint8_t *newFb = convertX11(image);
+    uint8_t *newImage = convertX11(image);
 
-    if (newFb != NULL) {
-        (savePng(newFb, image->width, image->height, name) == ERROR) ? 
+    if (newImage != NULL) {
+        (savePng(newImage, image->width, image->height, name) == ERROR) ? 
         printf("Errore durante il salvataggio dello screen.\n") : printf("Screenshot salvato con successo!\n");
 
-        free(newFb);
+        free(newImage);
     }
 
     XDestroyImage(image);
